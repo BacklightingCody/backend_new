@@ -20,8 +20,10 @@
     "paths": {
       "@/*": ["src/*"],
       "@types": ["src/types/*"],
-      "@prisma": ["prisma/*"]
-    }
+      "@prisma": ["prisma/*"],
+      "@constant/*": ["src/common/constant/*"],
+    },
+    "esModuleInterop": true,
   },
   "include": ["src", "prisma"],
 }

@@ -4,6 +4,6 @@ import { BookstackService } from './bookstack.service';
 
 @Module({
   controllers: [BookstackController],
-  providers: [BookstackService]
+  providers: [BookstackService],
 })
 export class BookstackModule {}
