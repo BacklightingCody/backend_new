@@ -7,13 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 用户角色枚举
 enum UserRole {
   USER
   ADMIN
 }
 
-// 用户状态枚举
 enum UserStatus {
   ACTIVE
   BANNED
@@ -22,19 +20,20 @@ enum UserStatus {
 
 model User {
   id        Int     @id @default(autoincrement())
-  clerkId   String? @unique // 可选，用于 Clerk 用户
+  clerkId   String? @unique
   email     String  @unique
   username  String?
   firstName String?
   lastName  String?
   imageUrl  String?
 
-  passwordHash String?    @map("password_hash") // 若为自定义登录用户则使用
+  passwordHash String?    @map("password_hash")
   role         UserRole   @default(USER)
   status       UserStatus @default(ACTIVE)
 
-  sessions Session[] // 自定义登录 session 管理
+  sessions Session[]
   articles Article[]
+  messages Message[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -54,15 +53,27 @@ model Session {
 }
 
 model Article {
-  id        Int       @id @default(autoincrement())
-  title     String    @db.VarChar(256)
-  content   String    @db.Text
-  summary   String?   @db.Text
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
-  user      User      @relation(fields: [userId], references: [id])
-  userId    Int       @map("user_id")
-  messages  Message[]
+  id         Int      @id @default(autoincrement())
+  slug       String   @unique @db.VarChar(256) // URL 唯一标识
+  title      String   @db.VarChar(256)
+  summary    String?  @db.Text
+  content    String   @db.Text // Markdown 源内容
+  html       String?  @db.Text // 可选的 Markdown 转 HTML 缓存
+  coverImage String?  @map("cover_image") // 封面图路径
+  readTime   String?  @map("read_time") // 估算阅读时间（如：6分钟阅读）
+  category   String   @db.VarChar(64)
+  tags       String[] // PostgreSQL 字符串数组
+
+  likes     Int @default(0)
+  bookmarks Int @default(0)
+  comments  Int @default(0)
+
+  userId   Int       @map("user_id")
+  user     User      @relation(fields: [userId], references: [id])
+  messages Message[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("articles")
 }
@@ -71,8 +82,12 @@ model Message {
   id        Int      @id @default(autoincrement())
   content   String   @db.Text
   createdAt DateTime @default(now()) @map("created_at")
-  article   Article  @relation(fields: [articleId], references: [id])
-  articleId Int      @map("article_id")
+
+  articleId Int     @map("article_id")
+  article   Article @relation(fields: [articleId], references: [id])
+
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id])
 
   @@map("messages")
 }
