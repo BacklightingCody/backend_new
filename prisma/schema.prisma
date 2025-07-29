@@ -53,16 +53,16 @@ model Session {
 }
 
 model Article {
-  id         Int      @id @default(autoincrement())
-  slug       String   @unique @db.VarChar(256) // URL 唯一标识
-  title      String   @db.VarChar(256)
-  summary    String?  @db.Text
-  content    String   @db.Text // Markdown 源内容
-  html       String?  @db.Text // 可选的 Markdown 转 HTML 缓存
-  coverImage String?  @map("cover_image") // 封面图路径
-  readTime   String?  @map("read_time") // 估算阅读时间（如：6分钟阅读）
-  category   String   @db.VarChar(64)
-  tags       String[] // PostgreSQL 字符串数组
+  id          Int          @id @default(autoincrement())
+  slug        String       @unique @db.VarChar(256) // URL 唯一标识
+  title       String       @db.VarChar(256)
+  summary     String?      @db.Text
+  content     String       @db.Text // Markdown 源内容
+  html        String?      @db.Text // 可选的 Markdown 转 HTML 缓存
+  coverImage  String?      @map("cover_image") // 封面图路径
+  readTime    Int?         @map("read_time") // 估算阅读时间（如：6分钟阅读）
+  category    String       @db.VarChar(64)
+  articleTags ArticleTag[] 
 
   likes     Int @default(0)
   bookmarks Int @default(0)
@@ -78,16 +78,56 @@ model Article {
   @@map("articles")
 }
 
+model Tag {
+  id       Int          @id @default(autoincrement())
+  name     String       @unique
+  articles ArticleTag[]
+}
+
+model ArticleTag {
+  article   Article @relation(fields: [articleId], references: [id])
+  articleId Int
+  tag       Tag     @relation(fields: [tagId], references: [id])
+  tagId     Int
+
+  @@id([articleId, tagId])
+}
+
 model Message {
   id        Int      @id @default(autoincrement())
   content   String   @db.Text
   createdAt DateTime @default(now()) @map("created_at")
-
-  articleId Int     @map("article_id")
-  article   Article @relation(fields: [articleId], references: [id])
+  updatedAt DateTime @updatedAt @map("updated_at")
+  articleId Int      @map("article_id")
+  article   Article  @relation(fields: [articleId], references: [id])
 
   userId Int  @map("user_id")
   user   User @relation(fields: [userId], references: [id])
 
   @@map("messages")
+}
+
+model BookStack {
+  id          Int     @id @default(autoincrement())
+  title       String  @db.VarChar(256)
+  author      String? @db.VarChar(128)
+  description String? @db.Text
+  cover       String? // 封面图地址
+  progress    Int     @default(0) // 0 - 100
+  isCompleted Boolean @default(false)
+  rating      Float   @default(0.0) // 评分 1.0 - 10.0
+  category    String  @db.VarChar(64) // 例如 "programming", "novels"
+
+  tags BookTag[] // 多对多标签
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("book_stacks")
+}
+
+model BookTag {
+  id    Int         @id @default(autoincrement())
+  name  String      @unique
+  books BookStack[] // 多对多（如果不和其他模型共用，可以改名）
 }
