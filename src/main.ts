@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import cookieParser from 'cookie-parser';
+import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -19,7 +19,7 @@ async function bootstrap() {
   );
 
   // 中间件
-  app.use(cookieParser());
+  app.use(cookieParser.default());
   app.use(helmet());
 
   // CORS 配置
