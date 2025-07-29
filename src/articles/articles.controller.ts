@@ -1,4 +1,240 @@
-import { Controller } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
+import { ArticlesService } from './articles.service';
+import { CreateArticleDto } from './dto/create-article.dto';
+import { UpdateArticleDto } from './dto/update-article.dto';
+import { ArticleQueryDto } from './dto/article-query.dto';
+import { ApiResponse, PaginationResult } from '../types';
+import { Article } from '@prisma/client';
 
 @Controller('articles')
-export class ArticlesController {}
+export class ArticlesController {
+  constructor(private readonly articlesService: ArticlesService) {}
+
+  @Post()
+  async create(@Body() createArticleDto: CreateArticleDto): Promise<ApiResponse<Article>> {
+    try {
+      const article = await this.articlesService.create(createArticleDto);
+      return {
+        success: true,
+        data: article,
+        message: 'Article created successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Get()
+  async findAll(@Query() query: ArticleQueryDto): Promise<ApiResponse<PaginationResult<Article>>> {
+    try {
+      const result = await this.articlesService.findAll(query);
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Get('categories')
+  async getCategories(): Promise<ApiResponse<string[]>> {
+    try {
+      const categories = await this.articlesService.getCategories();
+      return {
+        success: true,
+        data: categories,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Get('popular')
+  async getPopular(@Query('limit') limit?: number): Promise<ApiResponse<Article[]>> {
+    try {
+      const articles = await this.articlesService.getPopularArticles(limit);
+      return {
+        success: true,
+        data: articles,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Get('recent')
+  async getRecent(@Query('limit') limit?: number): Promise<ApiResponse<Article[]>> {
+    try {
+      const articles = await this.articlesService.getRecentArticles(limit);
+      return {
+        success: true,
+        data: articles,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Get(':id')
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<Article>> {
+    try {
+      const article = await this.articlesService.findOne(id);
+      return {
+        success: true,
+        data: article,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Get('slug/:slug')
+  async findBySlug(@Param('slug') slug: string): Promise<ApiResponse<Article>> {
+    try {
+      const article = await this.articlesService.findBySlug(slug);
+      return {
+        success: true,
+        data: article,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateArticleDto: UpdateArticleDto,
+  ): Promise<ApiResponse<Article>> {
+    try {
+      const article = await this.articlesService.update(id, updateArticleDto);
+      return {
+        success: true,
+        data: article,
+        message: 'Article updated successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Patch(':id/publish')
+  async publish(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<Article>> {
+    try {
+      const article = await this.articlesService.publish(id);
+      return {
+        success: true,
+        data: article,
+        message: 'Article published successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Patch(':id/unpublish')
+  async unpublish(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<Article>> {
+    try {
+      const article = await this.articlesService.unpublish(id);
+      return {
+        success: true,
+        data: article,
+        message: 'Article unpublished successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Patch(':id/like')
+  async like(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<Article>> {
+    try {
+      const article = await this.articlesService.incrementLikes(id);
+      return {
+        success: true,
+        data: article,
+        message: 'Article liked successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Patch(':id/bookmark')
+  async bookmark(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<Article>> {
+    try {
+      const article = await this.articlesService.incrementBookmarks(id);
+      return {
+        success: true,
+        data: article,
+        message: 'Article bookmarked successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Delete(':id')
+  async remove(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<Article>> {
+    try {
+      const article = await this.articlesService.remove(id);
+      return {
+        success: true,
+        data: article,
+        message: 'Article deleted successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+}

@@ -7,11 +7,13 @@ import { ArticlesModule } from './articles/articles.module';
 import { BookstackModule } from './bookstack/bookstack.module';
 import { FriendLinkModule } from './friend-link/friend-link.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { CommonModule } from './common/common.module';
 import { ConfigModule } from '@nestjs/config';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: process.env.NODE_ENV === 'production'?'.env.production':'.env.development',
+      envFilePath: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development',
       isGlobal: true,
     }),
     AuthModule,
@@ -19,9 +21,10 @@ import { ConfigModule } from '@nestjs/config';
     ArticlesModule,
     BookstackModule,
     FriendLinkModule,
+    CommonModule,
     PrismaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

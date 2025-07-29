@@ -62,35 +62,53 @@ model Article {
   coverImage  String?      @map("cover_image") // 封面图路径
   readTime    Int?         @map("read_time") // 估算阅读时间（如：6分钟阅读）
   category    String       @db.VarChar(64)
-  articleTags ArticleTag[] 
+  isPublished Boolean      @default(false) @map("is_published") // 是否发布
+  isDraft     Boolean      @default(true) @map("is_draft") // 是否草稿
+  viewCount   Int          @default(0) @map("view_count") // 浏览次数
+  articleTags ArticleTag[]
 
   likes     Int @default(0)
   bookmarks Int @default(0)
   comments  Int @default(0)
 
   userId   Int       @map("user_id")
-  user     User      @relation(fields: [userId], references: [id])
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages Message[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([userId])
+  @@index([category])
+  @@index([isPublished])
+  @@index([createdAt])
   @@map("articles")
 }
 
 model Tag {
-  id       Int          @id @default(autoincrement())
-  name     String       @unique
-  articles ArticleTag[]
+  id          Int          @id @default(autoincrement())
+  name        String       @unique @db.VarChar(64)
+  slug        String       @unique @db.VarChar(64) // URL 友好的标识符
+  color       String?      @db.VarChar(7) // 标签颜色，如 #FF5733
+  description String?      @db.Text // 标签描述
+  articles    ArticleTag[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("tags")
 }
 
 model ArticleTag {
-  article   Article @relation(fields: [articleId], references: [id])
-  articleId Int
-  tag       Tag     @relation(fields: [tagId], references: [id])
-  tagId     Int
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleId Int     @map("article_id")
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId     Int     @map("tag_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@id([articleId, tagId])
+  @@map("article_tags")
 }
 
 model Message {
@@ -109,16 +127,22 @@ model Message {
 
 model BookStack {
   id          Int     @id @default(autoincrement())
+  slug        String  @unique @db.VarChar(256) // URL 唯一标识
   title       String  @db.VarChar(256)
   author      String? @db.VarChar(128)
   description String? @db.Text
   cover       String? // 封面图地址
   progress    Int     @default(0) // 0 - 100
-  isCompleted Boolean @default(false)
+  isCompleted Boolean @default(false) @map("is_completed")
   rating      Float   @default(0.0) // 评分 1.0 - 10.0
   category    String  @db.VarChar(64) // 例如 "programming", "novels"
+  isbn        String? @db.VarChar(20) // ISBN 号
+  publisher   String? @db.VarChar(128) // 出版社
+  publishDate DateTime? @map("publish_date") // 出版日期
+  pageCount   Int?    @map("page_count") // 页数
+  language    String? @db.VarChar(10) @default("zh-CN") // 语言
 
-  tags BookTag[] // 多对多标签
+  bookTags BookStackTag[] // 多对多标签关系
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -127,7 +151,23 @@ model BookStack {
 }
 
 model BookTag {
-  id    Int         @id @default(autoincrement())
-  name  String      @unique
-  books BookStack[] // 多对多（如果不和其他模型共用，可以改名）
+  id        Int              @id @default(autoincrement())
+  name      String           @unique @db.VarChar(64)
+  color     String?          @db.VarChar(7) // 标签颜色，如 #FF5733
+  bookTags  BookStackTag[]   // 多对多关系
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("book_tags")
+}
+
+model BookStackTag {
+  bookStack   BookStack @relation(fields: [bookStackId], references: [id], onDelete: Cascade)
+  bookStackId Int       @map("book_stack_id")
+  bookTag     BookTag   @relation(fields: [bookTagId], references: [id], onDelete: Cascade)
+  bookTagId   Int       @map("book_tag_id")
+
+  @@id([bookStackId, bookTagId])
+  @@map("book_stack_tags")
 }

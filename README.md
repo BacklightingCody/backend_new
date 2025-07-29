@@ -1,98 +1,193 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 个人博客后端系统
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+一个基于 NestJS 的现代化个人博客后端系统，支持用户管理、文章管理、书籍管理和完整的认证授权功能。
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🚀 特性
 
-## Description
+- **用户管理**: 完整的用户 CRUD，支持 Clerk 集成
+- **文章系统**: Markdown 支持，标签分类，发布管理
+- **书籍管理**: 阅读进度跟踪，评分系统
+- **认证授权**: JWT + Clerk 集成，基于角色的权限控制
+- **评论系统**: 文章评论功能
+- **标签管理**: 文章和书籍标签系统
+- **搜索过滤**: 高级搜索和分页支持
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 🛠 技术栈
 
-## Project setup
+- **框架**: NestJS
+- **数据库**: PostgreSQL + Prisma ORM
+- **认证**: JWT + Clerk
+- **验证**: class-validator
+- **语言**: TypeScript
 
-```bash
-$ pnpm install
-```
+## 📦 安装和配置
 
-## Compile and run the project
+### 环境要求
+- Node.js 18+
+- PostgreSQL 14+
+- pnpm
+
+### 安装步骤
 
 ```bash
-# development
-$ pnpm run start
+# 1. 安装依赖
+pnpm install
 
-# watch mode
-$ pnpm run start:dev
+# 2. 配置环境变量
+cp .env.example .env.development
+# 编辑 .env.development 文件，配置数据库连接等
 
-# production mode
-$ pnpm run start:prod
+# 3. 生成 Prisma Client
+pnpm prisma generate
+
+# 4. 运行数据库迁移
+pnpm prisma migrate dev
+
+# 5. 启动开发服务器
+pnpm run start:dev
 ```
 
-## Run tests
+### 环境变量配置
+
+创建 `.env.development` 文件：
+
+```env
+# 数据库配置
+DATABASE_URL="postgresql://username:password@localhost:5432/blog_db"
+
+# JWT 配置
+JWT_SECRET="your-super-secret-jwt-key"
+
+# 应用配置
+PORT=3000
+NODE_ENV=development
+```
+
+## 🏗 项目结构
+
+```
+src/
+├── auth/                 # 认证模块
+├── user/                 # 用户模块
+├── articles/             # 文章模块
+├── bookstack/            # 书籍模块
+├── common/               # 通用模块
+│   ├── controllers/      # 通用控制器
+│   ├── services/         # 通用服务
+│   ├── dto/             # 数据传输对象
+│   ├── decorators/       # 装饰器
+│   ├── filters/          # 异常过滤器
+│   └── interceptors/     # 拦截器
+├── prisma/              # Prisma 服务
+├── types/               # 类型定义
+└── config/              # 配置文件
+```
+
+## 📚 API 接口
+
+### 认证接口 (/auth)
+- `POST /auth/register` - 用户注册
+- `POST /auth/login` - 用户登录
+- `POST /auth/clerk-sync` - Clerk 用户同步
+- `POST /auth/refresh` - 刷新 Token
+- `GET /auth/profile` - 获取用户资料
+
+### 用户接口 (/users)
+- `GET /users` - 用户列表
+- `GET /users/:id` - 用户详情
+- `PATCH /users/:id` - 更新用户
+- `GET /users/:id/stats` - 用户统计
+
+### 文章接口 (/articles)
+- `GET /articles` - 文章列表
+- `POST /articles` - 创建文章
+- `GET /articles/:id` - 文章详情
+- `PATCH /articles/:id/publish` - 发布文章
+- `GET /articles/popular` - 热门文章
+
+### 书籍接口 (/bookstack)
+- `GET /bookstack` - 书籍列表
+- `POST /bookstack` - 添加书籍
+- `PATCH /bookstack/:id/progress` - 更新进度
+- `GET /bookstack/stats` - 阅读统计
+
+## 🔒 安全特性
+
+- JWT Token 认证
+- 密码 bcrypt 加密
+- 基于角色的权限控制
+- 输入数据验证
+- SQL 注入防护
+
+## 🚀 运行和部署
+
+### 开发环境
+```bash
+# 启动开发服务器
+pnpm run start:dev
+
+# 运行测试
+pnpm run test
+
+# 运行 E2E 测试
+pnpm run test:e2e
+```
+
+### 生产环境
+```bash
+# 构建项目
+pnpm run build
+
+# 启动生产服务器
+pnpm run start:prod
+```
+
+## 📖 文档
+
+详细文档请查看 `docs/` 目录：
+
+- [初始实现文档](./docs/01-initial-implementation.md) - 基础功能实现
+- [认证和通用功能文档](./docs/02-auth-and-common-features.md) - 认证系统和通用功能
+- [最终总结文档](./docs/03-final-summary.md) - 完整项目总结
+
+## 🗄️ 数据库
+
+### Prisma 命令
 
 ```bash
-# unit tests
-$ pnpm run test
+# 生成 Prisma Client
+pnpm prisma generate
 
-# e2e tests
-$ pnpm run test:e2e
+# 创建迁移
+pnpm prisma migrate dev --name init
 
-# test coverage
-$ pnpm run test:cov
+# 重置数据库
+pnpm prisma migrate reset
+
+# 查看数据库
+pnpm prisma studio
 ```
 
-## Deployment
+### 数据库结构
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+- **users**: 用户信息
+- **articles**: 文章内容
+- **book_stacks**: 书籍信息
+- **tags**: 文章标签
+- **book_tags**: 书籍标签
+- **messages**: 评论信息
+- **sessions**: 用户会话
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## 🤝 贡献
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
-```
+欢迎提交 Issue 和 Pull Request！
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 📄 许可证
 
-## Resources
+MIT License
 
-Check out a few resources that may come in handy when working with NestJS:
+---
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+**开发完成时间**: 2025-01-29
+**版本**: v3.0.0
+**状态**: 生产就绪
