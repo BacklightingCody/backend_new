@@ -35,8 +35,13 @@ model User {
   articles Article[]
   messages Message[]
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  ChatSession        ChatSession[]
+  ChatMessage        ChatMessage[]
+  SystemPrompt       SystemPrompt[]
+  UserActivity       UserActivity[]
+  UserActivityStatus UserActivityStatus?
 
   @@map("users")
 }
@@ -126,21 +131,21 @@ model Message {
 }
 
 model BookStack {
-  id          Int     @id @default(autoincrement())
-  slug        String  @unique @db.VarChar(256) // URL 唯一标识
-  title       String  @db.VarChar(256)
-  author      String? @db.VarChar(128)
-  description String? @db.Text
+  id          Int       @id @default(autoincrement())
+  slug        String    @unique @db.VarChar(256) // URL 唯一标识
+  title       String    @db.VarChar(256)
+  author      String?   @db.VarChar(128)
+  description String?   @db.Text
   cover       String? // 封面图地址
-  progress    Int     @default(0) // 0 - 100
-  isCompleted Boolean @default(false) @map("is_completed")
-  rating      Float   @default(0.0) // 评分 1.0 - 10.0
-  category    String  @db.VarChar(64) // 例如 "programming", "novels"
-  isbn        String? @db.VarChar(20) // ISBN 号
-  publisher   String? @db.VarChar(128) // 出版社
+  progress    Int       @default(0) // 0 - 100
+  isCompleted Boolean   @default(false) @map("is_completed")
+  rating      Float     @default(0.0) // 评分 1.0 - 10.0
+  category    String    @db.VarChar(64) // 例如 "programming", "novels"
+  isbn        String?   @db.VarChar(20) // ISBN 号
+  publisher   String?   @db.VarChar(128) // 出版社
   publishDate DateTime? @map("publish_date") // 出版日期
-  pageCount   Int?    @map("page_count") // 页数
-  language    String? @db.VarChar(10) @default("zh-CN") // 语言
+  pageCount   Int?      @map("page_count") // 页数
+  language    String?   @default("zh-CN") @db.VarChar(10) // 语言
 
   bookTags BookStackTag[] // 多对多标签关系
 
@@ -151,10 +156,10 @@ model BookStack {
 }
 
 model BookTag {
-  id        Int              @id @default(autoincrement())
-  name      String           @unique @db.VarChar(64)
-  color     String?          @db.VarChar(7) // 标签颜色，如 #FF5733
-  bookTags  BookStackTag[]   // 多对多关系
+  id       Int            @id @default(autoincrement())
+  name     String         @unique @db.VarChar(64)
+  color    String?        @db.VarChar(7) // 标签颜色，如 #FF5733
+  bookTags BookStackTag[] // 多对多关系
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -170,4 +175,200 @@ model BookStackTag {
 
   @@id([bookStackId, bookTagId])
   @@map("book_stack_tags")
+}
+
+// ==================== Chat 功能相关模型 ====================
+
+enum ChatMessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+}
+
+enum ChatMessageStatus {
+  SENDING
+  SENT
+  ERROR
+  CANCELED
+}
+
+enum ModelProvider {
+  OPENAI
+  CLAUDE
+  GEMINI
+  QWEN
+  BAICHUAN
+  CHATGLM
+  CUSTOM
+}
+
+model ChatSession {
+  id           String  @id @default(cuid())
+  name         String  @db.VarChar(256)
+  systemPrompt String? @map("system_prompt") @db.Text
+
+  // 用户关联
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 模型配置
+  modelProvider    ModelProvider @default(OPENAI) @map("model_provider")
+  modelName        String        @map("model_name") @db.VarChar(128)
+  modelUrl         String?       @map("model_url") @db.VarChar(512)
+  modelToken       String?       @map("model_token") @db.Text
+  temperature      Float?        @default(0.7)
+  maxTokens        Int?          @default(2048) @map("max_tokens")
+  topP             Float?        @default(1.0) @map("top_p")
+  topK             Int?          @map("top_k")
+  frequencyPenalty Float?        @default(0.0) @map("frequency_penalty")
+  presencePenalty  Float?        @default(0.0) @map("presence_penalty")
+
+  // 会话元数据
+  shareAble   Boolean @default(false) @map("share_able")
+  sessionType String? @default("general") @map("session_type") // general, product, document
+
+  // 关联数据（可选）
+  documentId  String? @map("document_id")
+  productCode String? @map("product_code")
+
+  // 消息关联
+  messages ChatMessage[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([sessionType])
+  @@index([createdAt])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id      String            @id @default(cuid())
+  role    ChatMessageRole
+  content String            @db.Text
+  status  ChatMessageStatus @default(SENT)
+
+  // 多模态支持
+  images String[] // 图片URL数组
+
+  // 会话关联
+  sessionId String      @map("session_id")
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // 用户关联
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 消息元数据
+  tokenCount Int? @default(0) @map("token_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+model SystemPrompt {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(128)
+  content     String  @db.Text
+  description String? @db.Text
+  isDefault   Boolean @default(false) @map("is_default")
+
+  // 用户关联
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([isDefault])
+  @@map("system_prompts")
+}
+
+// ==================== 实时活动监控相关模型 ====================
+
+enum ActivityType {
+  APPLICATION_FOCUS // 应用程序获得焦点
+  APPLICATION_BLUR // 应用程序失去焦点
+  WINDOW_CHANGE // 窗口切换
+  IDLE_START // 开始空闲
+  IDLE_END // 结束空闲
+  SYSTEM_LOCK // 系统锁定
+  SYSTEM_UNLOCK // 系统解锁
+}
+
+enum ActivityStatus {
+  ACTIVE
+  IDLE
+  OFFLINE
+}
+
+model UserActivity {
+  id String @id @default(cuid())
+
+  // 用户关联
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 活动信息
+  activityType    ActivityType @map("activity_type")
+  applicationName String?      @map("application_name") @db.VarChar(256)
+  windowTitle     String?      @map("window_title") @db.VarChar(512)
+  processName     String?      @map("process_name") @db.VarChar(256)
+
+  // 系统信息
+  operatingSystem String? @map("operating_system") @db.VarChar(64)
+  deviceName      String? @map("device_name") @db.VarChar(128)
+  ipAddress       String? @map("ip_address") @db.VarChar(45)
+  userAgent       String? @map("user_agent") @db.Text
+
+  // 时间信息
+  startTime DateTime  @map("start_time")
+  endTime   DateTime? @map("end_time")
+  duration  Int? // 持续时间（秒）
+
+  // 额外数据
+  metadata Json? // 存储额外的活动数据
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([activityType])
+  @@index([startTime])
+  @@index([createdAt])
+  @@map("user_activities")
+}
+
+model UserActivityStatus {
+  id String @id @default(cuid())
+
+  // 用户关联
+  userId Int  @unique @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 当前状态
+  currentStatus ActivityStatus @default(OFFLINE) @map("current_status")
+  lastActivity  DateTime?      @map("last_activity")
+
+  // 当前活动信息
+  currentApp    String? @map("current_app") @db.VarChar(256)
+  currentWindow String? @map("current_window") @db.VarChar(512)
+
+  // 在线时长统计
+  todayOnlineTime Int @default(0) @map("today_online_time") // 今日在线时长（秒）
+  totalOnlineTime Int @default(0) @map("total_online_time") // 总在线时长（秒）
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([currentStatus])
+  @@index([lastActivity])
+  @@map("user_activity_status")
 }
