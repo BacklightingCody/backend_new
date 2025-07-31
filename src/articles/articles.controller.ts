@@ -10,15 +10,20 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { ArticlesService } from './articles.service';
+import { ArticleImportService } from './article-import.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
+import { ImportDataDto } from './dto/import-article.dto';
 import { ArticleQueryDto } from './dto/article-query.dto';
 import { ApiResponse, PaginationResult } from '../types';
 import { Article } from '@prisma/client';
 
 @Controller('articles')
 export class ArticlesController {
-  constructor(private readonly articlesService: ArticlesService) {}
+  constructor(
+    private readonly articlesService: ArticlesService,
+    private readonly articleImportService: ArticleImportService,
+  ) {}
 
   @Post()
   async create(@Body() createArticleDto: CreateArticleDto): Promise<ApiResponse<Article>> {
@@ -229,6 +234,42 @@ export class ArticlesController {
         success: true,
         data: article,
         message: 'Article deleted successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  // 数据导入端点
+  @Post('import')
+  async importData(@Body() importData: ImportDataDto) {
+    try {
+      const results = await this.articleImportService.importData(importData);
+      return {
+        success: true,
+        data: results,
+        message: 'Data imported successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  // 清理所有数据端点（开发环境使用）
+  @Delete('clear-all')
+  async clearAllData() {
+    try {
+      const result = await this.articleImportService.clearAllData();
+      return {
+        success: true,
+        data: result,
+        message: 'All data cleared successfully',
       };
     } catch (error) {
       return {

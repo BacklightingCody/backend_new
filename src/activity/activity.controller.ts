@@ -170,7 +170,7 @@ export class ActivityController {
   @Post('activities/batch')
   async createActivitiesBatch(@Req() req: any, @Body() activities: CreateActivityDto[]) {
     const userId = req.user.id;
-    const results = [];
+    const results: Array<{ success: boolean; data?: any; error?: string }> = [];
 
     for (const activityDto of activities) {
       try {
@@ -180,7 +180,7 @@ export class ActivityController {
         results.push({ success: false, error: error.message });
       }
     }
-    
+
     return {
       success: true,
       data: results,

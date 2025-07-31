@@ -24,13 +24,13 @@ async function bootstrap() {
 
   // CORS 配置
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000', 'https://yourdomain.com'],
+    origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001', 'https://yourdomain.com'],
     credentials: true,
   });
 
-  // 全局过滤器和拦截器
-  app.useGlobalFilters(new AllExceptionsFilter());
-  app.useGlobalInterceptors(new ResponseInterceptor());
+  // 全局过滤器和拦截器 - 临时注释用于开发测试
+  // app.useGlobalFilters(new AllExceptionsFilter());
+  // app.useGlobalInterceptors(new ResponseInterceptor());
 
   const port = process.env.PORT || 3000;
   await app.listen(port);

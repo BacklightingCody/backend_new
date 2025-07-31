@@ -2,6 +2,15 @@ import { IsString, IsOptional, IsArray, IsEnum, IsBoolean, ValidateNested } from
 import { Type } from 'class-transformer';
 import { ChatMessageRole } from '@prisma/client';
 
+export class ImageUrlDto {
+  @IsString()
+  url: string;
+
+  @IsOptional()
+  @IsEnum(['low', 'high', 'auto'])
+  detail?: 'low' | 'high' | 'auto';
+}
+
 export class MessageContentDto {
   @IsEnum(['text', 'image_url'])
   type: 'text' | 'image_url';
@@ -14,15 +23,6 @@ export class MessageContentDto {
   @ValidateNested()
   @Type(() => ImageUrlDto)
   image_url?: ImageUrlDto;
-}
-
-export class ImageUrlDto {
-  @IsString()
-  url: string;
-
-  @IsOptional()
-  @IsEnum(['low', 'high', 'auto'])
-  detail?: 'low' | 'high' | 'auto';
 }
 
 export class OpenAIMessageDto {
