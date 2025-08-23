@@ -1,6 +1,5 @@
-import { IsString, IsOptional, IsArray, IsEnum, IsBoolean, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsBoolean, ValidateNested, IsEnum, IsNumber, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ChatMessageRole } from '@prisma/client';
 
 export class ImageUrlDto {
   @IsString()
@@ -26,11 +25,72 @@ export class MessageContentDto {
 }
 
 export class OpenAIMessageDto {
-  @IsEnum(ChatMessageRole)
-  role: ChatMessageRole;
+  @IsEnum(['system', 'user', 'assistant'])
+  role: 'system' | 'user' | 'assistant';
 
   @IsString()
   content: string;
+}
+
+export class PlaceholderItemDto {
+  @IsString()
+  id: string;
+
+  @IsString()
+  key: string;
+
+  @IsString()
+  value: string;
+
+  @IsEnum(['doc', 'img', 'product', 'language', 'version', 'gitCommitId', 'fileMd5', 'other'])
+  type: 'doc' | 'img' | 'product' | 'language' | 'version' | 'gitCommitId' | 'fileMd5' | 'other';
+
+  @IsOptional()
+  @IsString()
+  label?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+export class ModelConfigDto {
+  @IsString()
+  model: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(2)
+  temperature?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  maxTokens?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  topP?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  topK?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-2)
+  @Max(2)
+  frequencyPenalty?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-2)
+  @Max(2)
+  presencePenalty?: number;
 }
 
 export class SendMessageDto {
@@ -39,32 +99,34 @@ export class SendMessageDto {
   sessionId?: string;
 
   @IsString()
-  model: string;
+  content: string;
 
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  images?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  texts?: string[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ModelConfigDto)
+  modelConfig?: ModelConfigDto;
+
+  @IsOptional()
+  @IsString()
+  systemPrompt?: string;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => OpenAIMessageDto)
-  messages: OpenAIMessageDto[];
+  @Type(() => PlaceholderItemDto)
+  placeholders?: PlaceholderItemDto[];
 
   @IsOptional()
   @IsBoolean()
-  stream?: boolean;
-
-  @IsOptional()
-  temperature?: number;
-
-  @IsOptional()
-  max_tokens?: number;
-
-  @IsOptional()
-  top_p?: number;
-
-  @IsOptional()
-  frequency_penalty?: number;
-
-  @IsOptional()
-  presence_penalty?: number;
-
-  @IsOptional()
-  top_k?: number;
+  suppressUserMessage?: boolean;
 }

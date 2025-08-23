@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsNumber, IsBoolean, Min, Max, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsArray, IsEnum, IsNumber, Min, Max, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ModelProvider } from '@prisma/client';
 
@@ -79,4 +79,26 @@ export class CreateChatSessionDto {
   @IsOptional()
   @IsString()
   productCode?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  pinned?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isArchived?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  isModelCompare?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  compareModels?: string[];
 }

@@ -2,208 +2,299 @@ import {
   Controller, 
   Get, 
   Post, 
-  Body, 
-  Patch, 
-  Param, 
+  Put, 
   Delete, 
-  UseGuards, 
+  Body, 
+  Param, 
+  Query, 
   Req,
   Res,
-  Query,
+  UseGuards,
   HttpStatus,
-  BadRequestException
+  HttpCode
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ChatService } from './chat.service';
 import { CreateChatSessionDto, UpdateChatSessionDto, SendMessageDto } from './dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { User } from '../common/decorators/user.decorator';
 
 @Controller('chat')
 @UseGuards(AuthGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
-  // ==================== ChatSession 管理接口 ====================
+  // ==================== 会话管理 ====================
 
   @Post('sessions')
-  async createSession(@Req() req: any, @Body() createSessionDto: CreateChatSessionDto) {
-    const userId = req.user.id;
-    const session = await this.chatService.createSession(userId, createSessionDto);
-    
+  @HttpCode(HttpStatus.CREATED)
+  async createSession(@User() user: any, @Body() createSessionDto: CreateChatSessionDto) {
+    const session = await this.chatService.createSession(user.id, createSessionDto);
     return {
-      success: true,
-      data: session,
-      message: 'Chat session created successfully',
+      code: 200,
+      message: '会话创建成功',
+      data: session
     };
   }
 
   @Get('sessions')
-  async findAllSessions(@Req() req: any) {
-    const userId = req.user.id;
-    const sessions = await this.chatService.findAllSessions(userId);
-    
+  async findAllSessions(@User() user: any) {
+    const sessions = await this.chatService.findAllSessions(user.id);
     return {
-      success: true,
-      data: sessions,
-      message: 'Chat sessions retrieved successfully',
+      code: 200,
+      message: '获取会话列表成功',
+      data: sessions
     };
   }
 
   @Get('sessions/:id')
-  async findSession(@Req() req: any, @Param('id') sessionId: string) {
-    const userId = req.user.id;
-    const session = await this.chatService.findSessionById(sessionId, userId);
-    
+  async findSession(@User() user: any, @Param('id') sessionId: string) {
+    const session = await this.chatService.findSessionById(sessionId, user.id);
     return {
-      success: true,
-      data: session,
-      message: 'Chat session retrieved successfully',
+      code: 200,
+      message: '获取会话详情成功',
+      data: session
     };
   }
 
-  @Patch('sessions/:id')
+  @Put('sessions/:id')
   async updateSession(
-    @Req() req: any, 
+    @User() user: any, 
     @Param('id') sessionId: string, 
     @Body() updateSessionDto: UpdateChatSessionDto
   ) {
-    const userId = req.user.id;
-    const session = await this.chatService.updateSession(sessionId, userId, updateSessionDto);
-    
+    const session = await this.chatService.updateSession(sessionId, user.id, updateSessionDto);
     return {
-      success: true,
-      data: session,
-      message: 'Chat session updated successfully',
+      code: 200,
+      message: '会话更新成功',
+      data: session
     };
   }
 
   @Delete('sessions/:id')
-  async deleteSession(@Req() req: any, @Param('id') sessionId: string) {
-    const userId = req.user.id;
-    await this.chatService.deleteSession(sessionId, userId);
-    
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteSession(@User() user: any, @Param('id') sessionId: string) {
+    await this.chatService.deleteSession(sessionId, user.id);
     return {
-      success: true,
-      message: 'Chat session deleted successfully',
+      code: 200,
+      message: '会话删除成功'
     };
   }
 
-  // ==================== 消息发送接口 ====================
+  @Delete('sessions/:id/messages')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async clearSessionMessages(@User() user: any, @Param('id') sessionId: string) {
+    await this.chatService.clearSessionMessages(sessionId, user.id);
+    return {
+      code: 200,
+      message: '会话消息清空成功'
+    };
+  }
 
-  @Post('completions')
-  async sendMessage(
-    @Req() req: any,
-    @Body() sendMessageDto: SendMessageDto,
-    @Query('stream') stream?: string,
-    @Res() res?: Response
+  // ==================== 消息管理 ====================
+
+  @Post('sessions/:id/messages')
+  async addMessage(
+    @User() user: any,
+    @Param('id') sessionId: string,
+    @Body() body: { role: 'system' | 'user' | 'assistant'; content: string; images?: string[]; texts?: string[]; metadata?: any; rawContent?: string }
   ) {
-    const userId = req.user.id;
-    
-    // 如果是流式请求
-    if (stream === 'true' || sendMessageDto.stream) {
-      return this.sendStreamMessage(userId, sendMessageDto, res!);
-    }
-
-    // 非流式请求
-    try {
-      const response = await this.chatService.sendMessage(userId, sendMessageDto);
-      
-      return res!.status(HttpStatus.OK).json({
-        success: true,
-        data: response,
-        message: 'Message sent successfully',
-      });
-    } catch (error) {
-      return res!.status(HttpStatus.BAD_REQUEST).json({
-        success: false,
-        error: error.message,
-        message: 'Failed to send message',
-      });
-    }
+    const msg = await this.chatService.addMessage(
+      sessionId,
+      user.id,
+      body.role.toUpperCase() as any,
+      body.content,
+      body.images,
+      body.texts,
+      undefined,
+      body.metadata,
+      body.rawContent
+    );
+    return {
+      code: 200,
+      message: '消息保存成功',
+      data: msg
+    };
   }
 
-  // ==================== SSE 流式响应 ====================
-
-  private async sendStreamMessage(userId: number, sendMessageDto: SendMessageDto, res: Response) {
-    // 设置 SSE 响应头
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
-
-    try {
-      // 发送开始事件
-      res.write(`data: ${JSON.stringify({ type: 'start', message: 'Stream started' })}\n\n`);
-
-      // 这里应该实现真正的流式调用
-      // 目前先模拟流式响应
-      const response = await this.chatService.sendMessage(userId, sendMessageDto);
-      
-      // 模拟分块发送
-      const content = response.content || '';
-      const chunks = this.splitIntoChunks(content, 10);
-      
-      for (const chunk of chunks) {
-        res.write(`data: ${JSON.stringify({ 
-          type: 'content', 
-          content: chunk,
-          delta: chunk 
-        })}\n\n`);
-        
-        // 添加延迟模拟真实流式效果
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      // 发送结束事件
-      res.write(`data: ${JSON.stringify({ 
-        type: 'done', 
-        message: 'Stream completed',
-        usage: response.usage 
-      })}\n\n`);
-      
-    } catch (error) {
-      // 发送错误事件
-      res.write(`data: ${JSON.stringify({ 
-        type: 'error', 
-        error: error.message 
-      })}\n\n`);
-    } finally {
-      res.end();
-    }
+  @Post('messages')
+  async sendMessage(@User() user: any, @Body() sendMessageDto: SendMessageDto) {
+    const result = await this.chatService.sendMessage(user.id, sendMessageDto);
+    return {
+      code: 200,
+      message: '消息发送成功',
+      data: result
+    };
   }
 
-  private splitIntoChunks(text: string, chunkSize: number): string[] {
-    const chunks: string[] = [];
-    for (let i = 0; i < text.length; i += chunkSize) {
-      chunks.push(text.slice(i, i + chunkSize));
-    }
-    return chunks;
+  @Delete('sessions/:sessionId/messages/:messageId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteMessage(
+    @User() user: any, 
+    @Param('sessionId') sessionId: string, 
+    @Param('messageId') messageId: string
+  ) {
+    await this.chatService.deleteMessage(sessionId, messageId, user.id);
+    return {
+      code: 200,
+      message: '消息删除成功'
+    };
   }
 
-  // ==================== 兼容 OpenAI 格式的接口 ====================
+  @Put('sessions/:sessionId/messages/:messageId')
+  async editMessage(
+    @User() user: any,
+    @Param('sessionId') sessionId: string,
+    @Param('messageId') messageId: string,
+    @Body() body: { content: string }
+  ) {
+    const message = await this.chatService.editMessage(sessionId, messageId, body.content, user.id);
+    return {
+      code: 200,
+      message: '消息编辑成功',
+      data: message
+    };
+  }
 
-  @Post('v1/chat/completions')
+  // ==================== 系统提示词管理 ====================
+
+  @Post('system-prompts')
+  @HttpCode(HttpStatus.CREATED)
+  async createSystemPrompt(@User() user: any, @Body() prompt: { name: string; content: string; description?: string; isDefault?: boolean }) {
+    const systemPrompt = await this.chatService.createSystemPrompt(user.id, prompt);
+    return {
+      code: 200,
+      message: '系统提示词创建成功',
+      data: systemPrompt
+    };
+  }
+
+  @Get('system-prompts')
+  async findAllSystemPrompts(@User() user: any) {
+    const prompts = await this.chatService.findAllSystemPrompts(user.id);
+    return {
+      code: 200,
+      message: '获取系统提示词列表成功',
+      data: prompts
+    };
+  }
+
+  @Put('system-prompts/:id')
+  async updateSystemPrompt(
+    @User() user: any,
+    @Param('id') promptId: string,
+    @Body() updates: { name?: string; content?: string; description?: string; isDefault?: boolean }
+  ) {
+    const prompt = await this.chatService.updateSystemPrompt(promptId, user.id, updates);
+    return {
+      code: 200,
+      message: '系统提示词更新成功',
+      data: prompt
+    };
+  }
+
+  @Delete('system-prompts/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteSystemPrompt(@User() user: any, @Param('id') promptId: string) {
+    await this.chatService.deleteSystemPrompt(promptId, user.id);
+    return {
+      code: 200,
+      message: '系统提示词删除成功'
+    };
+  }
+
+  // ==================== 兼容性接口 ====================
+
+  @Post('completion')
   async openaiCompatibleChat(
-    @Req() req: any,
+    @User() user: any,
     @Body() body: any,
     @Query('stream') stream?: string,
     @Res() res?: Response
   ) {
-    // 转换为内部格式
+    // OpenAI 兼容的接口
+    const { model, messages, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, top_k } = body;
+    
+    // 转换消息格式
+    const lastMessage = messages[messages.length - 1];
     const sendMessageDto: SendMessageDto = {
-      sessionId: body.sessionId,
-      model: body.model,
-      messages: body.messages,
-      stream: body.stream || stream === 'true',
-      temperature: body.temperature,
-      max_tokens: body.max_tokens,
-      top_p: body.top_p,
-      frequency_penalty: body.frequency_penalty,
-      presence_penalty: body.presence_penalty,
-      top_k: body.top_k,
+      content: lastMessage.content,
+      modelConfig: {
+        model,
+        temperature,
+        maxTokens: max_tokens,
+        topP: top_p,
+        frequencyPenalty,
+        presencePenalty,
+        topK: top_k
+      }
     };
 
-    return this.sendMessage(req, sendMessageDto, stream, res);
+    if (stream === 'true') {
+      // 流式响应
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      try {
+        const result = await this.chatService.sendMessage(user.id, sendMessageDto);
+        const response = result.response;
+        
+        // 模拟流式输出
+        const chunks = response.split(' ');
+        for (const chunk of chunks) {
+          const data = {
+            id: `chatcmpl-${Date.now()}`,
+            object: 'chat.completion.chunk',
+            created: Math.floor(Date.now() / 1000),
+            model,
+            choices: [{
+              index: 0,
+              delta: { content: chunk + ' ' },
+              finish_reason: null
+            }]
+          };
+          
+          res.write(`data: ${JSON.stringify(data)}\n\n`);
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // 结束标记
+        res.write('data: [DONE]\n\n');
+        res.end();
+      } catch (error) {
+        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.end();
+      }
+    } else {
+      // 非流式响应
+      const result = await this.chatService.sendMessage(user.id, sendMessageDto);
+      
+      const response = {
+        id: `chatcmpl-${Date.now()}`,
+        object: 'chat.completion',
+        created: Math.floor(Date.now() / 1000),
+        model,
+        choices: [{
+          index: 0,
+          message: {
+            role: 'assistant',
+            content: result.response
+          },
+          finish_reason: 'stop'
+        }],
+        usage: {
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0
+        }
+      };
+      
+      return {
+        code: 200,
+        message: '请求成功',
+        data: response
+      };
+    }
   }
 }

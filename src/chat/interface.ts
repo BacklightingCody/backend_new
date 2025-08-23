@@ -7,6 +7,9 @@ export interface ChatMessage {
   // 用于界面显示的上下文信息（与发送到API的格式分离）
   images?: string[];
   texts?: string[];
+  error?: string;
+  metadata?: Record<string, any>;
+  rawContent?: string;
 }
 
 /**
@@ -22,14 +25,29 @@ export interface MessageContent {
 }
 
 /**
+ * 占位符结构，用于动态替换内容
+ */
+export interface PlaceholderItem {
+  id: string;
+  key: string;   // 替换占位名（如 doc、version、product）
+  value: string; // 替换后的值
+  type: 'doc' | 'img' | 'product' | 'language' | 'version' | 'gitCommitId' | 'fileMd5' | 'other';
+  label?: string;
+  description?: string;
+}
+
+/**
  * 发送消息请求
  */
 export interface SendMessageRequest {
-  content: string;
-  images?: string[]; // 图片 URL 数组
-  texts?: string[]; // 文本上下文数组
+  content: string;                  // 可以包含占位符（如 @{{doc}}）
+  images?: string[];
+  texts?: string[];
   modelConfig?: ModelConfig;
-  systemPromptId?: string;
+  systemPrompt?: string;
+  placeholders?: PlaceholderItem[]; // 占位符参数
+  // 不在会话中追加一条新的用户消息（用于重试：复用原用户消息）
+  suppressUserMessage?: boolean;
 }
 
 /**
@@ -38,7 +56,6 @@ export interface SendMessageRequest {
 export interface ModelConfig {
   model: string;
   temperature?: number;
-  token: string;
   topK?: number;
   maxTokens?: number;
   topP?: number;
@@ -64,7 +81,10 @@ export interface ChatCompletionRequest {
   stream?: boolean;
   // 自定义扩展参数
   top_k?: number;
-  useNewKey?: boolean;
+  // 额外：占位符（后端可选处理，不直接传第三方厂商）
+  placeholders?: Array<{ id?: string; key: string; value?: string; type?: string; label?: string }>;
+  // 期望的流式格式（默认 sse）
+  streamFormat?: 'sse' | 'json';
 }
 
 /**
@@ -87,17 +107,19 @@ export interface OpenAIMessageContent {
 export interface ChatSession {
   id: string;
   name: string;
-  adminUser: string;
   messages: ChatMessage[];
   systemPrompt: string;
   modelConfig: ModelConfig;
   createdAt: string;
   updatedAt: string;
-  sessionType?: 'product' | 'document';
-  shareAble: boolean; // 会话是否共享
-  // 新增字段
-  documentId?: string;
-  productCode?: string;
+  sessionType?: 'public' | 'private';
+  pinned?: boolean;
+  isArchived?: boolean;
+  tags?: string[];
+  // 对比模式
+  isModelCompare?: boolean;
+  compareModels?: string[];
+  messagesByModel?: Record<string, ChatMessage[]>;
 }
 
 /**

@@ -212,7 +212,7 @@ model ChatSession {
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // 模型配置
-  modelProvider    ModelProvider @default(OPENAI) @map("model_provider")
+  modelProvider    ModelProvider @default(GEMINI) @map("model_provider")
   modelName        String        @map("model_name") @db.VarChar(128)
   modelUrl         String?       @map("model_url") @db.VarChar(512)
   modelToken       String?       @map("model_token") @db.Text
@@ -225,7 +225,14 @@ model ChatSession {
 
   // 会话元数据
   shareAble   Boolean @default(false) @map("share_able")
-  sessionType String? @default("general") @map("session_type") // general, product, document
+  sessionType String? @default("private") @map("session_type") // private, public
+  pinned      Boolean @default(false)
+  isArchived  Boolean @default(false) @map("is_archived")
+  tags        String[] // 会话标签数组
+
+  // 对比模式支持
+  isModelCompare Boolean @default(false) @map("is_model_compare")
+  compareModels  String[] @map("compare_models") // 对比模型列表
 
   // 关联数据（可选）
   documentId  String? @map("document_id")
@@ -239,6 +246,8 @@ model ChatSession {
 
   @@index([userId])
   @@index([sessionType])
+  @@index([pinned])
+  @@index([isArchived])
   @@index([createdAt])
   @@map("chat_sessions")
 }
@@ -251,6 +260,14 @@ model ChatMessage {
 
   // 多模态支持
   images String[] // 图片URL数组
+  texts  String[] // 文本上下文数组
+
+  // 错误信息
+  error String? @db.Text
+
+  // 消息元数据
+  metadata Json? // 可扩展字段，如模型信息、占位符等
+  rawContent String? @map("raw_content") @db.Text // 原始包含占位符的内容
 
   // 会话关联
   sessionId String      @map("session_id")
@@ -268,6 +285,8 @@ model ChatMessage {
 
   @@index([sessionId])
   @@index([userId])
+  @@index([role])
+  @@index([status])
   @@index([createdAt])
   @@map("chat_messages")
 }
@@ -371,4 +390,33 @@ model UserActivityStatus {
   @@index([currentStatus])
   @@index([lastActivity])
   @@map("user_activity_status")
+}
+
+model Device {
+  id        String       @id @default(cuid())
+  name      String
+  sessions  AppSession[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model AppSession {
+  id        String     @id @default(cuid())
+  deviceId  String
+  device    Device     @relation(fields: [deviceId], references: [id])
+  startTime DateTime   @default(now())
+  endTime   DateTime?
+  apps      AppUsage[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model AppUsage {
+  id          String     @id @default(cuid())
+  sessionId   String
+  session     AppSession @relation(fields: [sessionId], references: [id])
+  appName     String
+  windowTitle String
+  timestamp   DateTime   @default(now())
+  createdAt   DateTime   @default(now())
 }
