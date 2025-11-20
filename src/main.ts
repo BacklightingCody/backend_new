@@ -4,6 +4,7 @@ import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { RequestLoggerInterceptor } from './common/interceptors/request-logger.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
@@ -26,14 +27,20 @@ async function bootstrap() {
   app.enableCors({
     origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001', 'https://yourdomain.com'],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  // 全局过滤器和拦截器 - 临时注释用于开发测试
+  // 添加全局前缀
+  app.setGlobalPrefix('api');
+
+  // 全局过滤器和拦截器
+  app.useGlobalInterceptors(new RequestLoggerInterceptor());
   // app.useGlobalFilters(new AllExceptionsFilter());
   // app.useGlobalInterceptors(new ResponseInterceptor());
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 8000;
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`Application is running on: http://localhost:${port}/api`);
 }
 bootstrap();

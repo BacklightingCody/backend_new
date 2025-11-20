@@ -8,7 +8,7 @@ import { PaginationResult } from '../types';
 
 @Injectable()
 export class ArticlesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(createArticleDto: CreateArticleDto): Promise<Article> {
     const { tags, ...articleData } = createArticleDto;
@@ -117,16 +117,16 @@ export class ArticlesService {
     if (typeof isPublished === 'boolean') where.isPublished = isPublished;
     if (typeof isDraft === 'boolean') where.isDraft = isDraft;
 
-    // 作者过滤
-    if (author) {
-      where.user = {
-        OR: [
-          { username: { contains: author, mode: 'insensitive' } },
-          { firstName: { contains: author, mode: 'insensitive' } },
-          { lastName: { contains: author, mode: 'insensitive' } },
-        ],
-      };
-    }
+    // 作者过滤 - 暂时注释掉，返回所有文章
+    // if (author) {
+    //   where.user = {
+    //     OR: [
+    //       { username: { contains: author, mode: 'insensitive' } },
+    //       { firstName: { contains: author, mode: 'insensitive' } },
+    //       { lastName: { contains: author, mode: 'insensitive' } },
+    //     ],
+    //   };
+    // }
 
     // 标签过滤
     if (tag || tags) {
@@ -175,6 +175,8 @@ export class ArticlesService {
 
     const totalPages = Math.ceil(total / limit);
 
+    // 打印返回的文章标题
+    console.log('返回的文章标题:', articles.map(article => article.title))
     return {
       data: articles,
       pagination: {

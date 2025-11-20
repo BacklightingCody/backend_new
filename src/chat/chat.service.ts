@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateChatSessionDto, UpdateChatSessionDto, SendMessageDto } from './dto';
 import { ChatSession, ChatMessage, SystemPrompt, SendMessageRequest, PlaceholderItem } from './interface';
@@ -182,10 +182,19 @@ export class ChatService {
       session = await this.findSessionById(sessionId, userId);
     } else {
       // 创建新会话
-      const createSessionDto = {
+      const createSessionDto: CreateChatSessionDto = {
         name: '新对话',
         systemPrompt: systemPrompt || '',
-        modelConfig: modelConfig || {
+        modelConfig: modelConfig ? {
+          modelProvider: ModelProvider.GEMINI,
+          modelName: modelConfig.model || 'gemini-2.0-flash',
+          temperature: modelConfig.temperature || 0.7,
+          maxTokens: modelConfig.maxTokens || 2048,
+          topP: modelConfig.topP,
+          topK: modelConfig.topK,
+          frequencyPenalty: modelConfig.frequencyPenalty,
+          presencePenalty: modelConfig.presencePenalty
+        } : {
           modelProvider: ModelProvider.GEMINI,
           modelName: 'gemini-2.0-flash',
           temperature: 0.7,

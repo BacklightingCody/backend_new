@@ -45,12 +45,15 @@ export class ArticlesController {
   @Get()
   async findAll(@Query() query: ArticleQueryDto): Promise<ApiResponse<PaginationResult<Article>>> {
     try {
+      console.log('文章查询参数:', query);
       const result = await this.articlesService.findAll(query);
+      console.log(`查询到 ${result.data.length} 篇文章`);
       return {
         success: true,
         data: result,
       };
     } catch (error) {
+      console.error('文章查询失败:', error.message);
       return {
         success: false,
         error: error.message,
